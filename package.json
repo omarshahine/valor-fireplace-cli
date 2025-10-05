@@ -1,0 +1,40 @@
+{
+  "name": "valor-fireplace-cli",
+  "version": "1.1.0",
+  "description": "Command-line interface for controlling Valor Fireplaces (powered by Mertik)",
+  "license": "Apache-2.0",
+  "author": "Omar Shahine",
+  "main": "dist/cli.js",
+  "bin": {
+    "fireplace-cli": "./dist/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omarshahine/valor-fireplace-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/omarshahine/valor-fireplace-cli/issues"
+  },
+  "homepage": "https://github.com/omarshahine/valor-fireplace-cli#readme",
+  "scripts": {
+    "build": "rimraf ./dist && tsc && chmod +x dist/cli.js",
+    "start": "npm run build && node dist/cli.js",
+    "clean": "rimraf ./dist"
+  },
+  "keywords": [
+    "fireplace",
+    "valor",
+    "mertik",
+    "cli",
+    "smart-home",
+    "iot",
+    "home-automation",
+    "typescript"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^16.10.9",
+    "rimraf": "^3.0.2",
+    "typescript": "^4.4.4"
+  }
+}

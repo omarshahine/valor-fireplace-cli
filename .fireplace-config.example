@@ -1,0 +1,48 @@
+# ========================================
+# Valor Fireplace CLI Configuration
+# ========================================
+# Copy this file to .fireplace-config and customize for your setup
+
+# Your fireplace's IP address (REQUIRED)
+# Find your fireplace's IP in your router's DHCP settings or mobile app
+FIREPLACE_IP=192.168.1.100
+
+# Temperature Unit: F (Fahrenheit) or C (Celsius)
+# Default: F
+TEMPERATURE_UNIT=F
+
+# ========================================
+# Temperature Guide
+# ========================================
+
+# FAHRENHEIT (TEMPERATURE_UNIT=F)
+# Common Settings:
+#   68°F - Cool comfort
+#   72°F - Standard warmth
+#   75°F - Warm
+#   77°F - Extra warm
+# Valid Range: 41°F to 97°F
+# Example: ./fp temp 72
+
+# CELSIUS (TEMPERATURE_UNIT=C)
+# Common Settings:
+#   20°C - Cool comfort
+#   22°C - Standard warmth
+#   24°C - Warm
+#   25°C - Extra warm
+# Valid Range: 5°C to 36°C
+# Example: ./fp temp 22
+
+# ========================================
+# Usage
+# ========================================
+# After editing this file:
+#   npm run build
+#   ./fp status
+#
+# First time setup:
+#   1. Copy this file: cp .fireplace-config.example .fireplace-config
+#   2. Edit .fireplace-config with your IP address
+#   3. Optionally change TEMPERATURE_UNIT
+#   4. Run: npm install && npm run build
+#   5. Test: ./fp status
