@@ -145,12 +145,6 @@ export class FireplaceCliController extends EventEmitter {
   }
 
   private async setTemperatureInternal(temperature: number) {
-    console.log(
-      `Setting temperature to ${TemperatureConverter.formatTemperature(
-        temperature,
-        this.useFahrenheit
-      )}...`
-    );
     this.setManualMode();
     await this.delay(1_000);
     this.resetFlameHeight();
