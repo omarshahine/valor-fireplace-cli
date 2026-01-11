@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Quick wrapper script for fireplace-cli
+# Quick wrapper script for valor-cli
 # Automatically loads the IP from .fireplace-config
 
 # Get the directory where this script is located
@@ -26,5 +26,5 @@ echo "🔥 Using fireplace at: $FIREPLACE_IP"
 echo "🌡️  Temperature unit: $TEMPERATURE_UNIT"
 echo ""
 
-# Run the fireplace-cli command using local dist version
+# Run the valor-cli command using local dist version
 node "$SCRIPT_DIR/dist/cli.js" "$@"

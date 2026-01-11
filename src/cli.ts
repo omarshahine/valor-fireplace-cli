@@ -23,7 +23,7 @@ if (!ip || !isValidIP(ip)) {
   console.error(
     "Either set FIREPLACE_IP environment variable or provide IP as last argument."
   );
-  console.error("Example: fireplace-cli status 192.168.1.100");
+  console.error("Example: valor-cli status 192.168.1.100");
   process.exit(1);
 }
 
@@ -121,9 +121,9 @@ function printUsage() {
   const tempExample = useFahrenheit ? "72" : "21";
 
   console.log(`
-Fireplace CLI - Control your Valor Fireplace from the terminal
+Valor CLI - Control your Valor Fireplace from the terminal
 
-Usage: fireplace-cli <command> [arguments] <ip>
+Usage: valor-cli <command> [arguments] <ip>
 
 Commands:
   on                          Turn on the fireplace
@@ -140,14 +140,14 @@ Environment Variables:
   FIREPLACE_IP               IP address of your fireplace (overrides config file)
 
 Examples:
-  fireplace-cli status 192.168.1.100
-  fireplace-cli on 192.168.1.100
-  fireplace-cli mode temperature 192.168.1.100
-  fireplace-cli temp ${tempExample} 192.168.1.100
+  valor-cli status 192.168.1.100
+  valor-cli on 192.168.1.100
+  valor-cli mode temperature 192.168.1.100
+  valor-cli temp ${tempExample} 192.168.1.100
   
   # Using config file (.fireplace-config)
-  fireplace-cli status
-  fireplace-cli temp ${tempExample}
+  valor-cli status
+  valor-cli temp ${tempExample}
 `);
 }
 

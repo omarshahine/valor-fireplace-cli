@@ -29,8 +29,8 @@ This WiFi module enables TCP/IP control over your local network, which is what t
 
 ### 1. Clone and Install
 ```bash
-git clone https://github.com/omarshahine/valor-fireplace-cli.git
-cd valor-fireplace-cli
+git clone https://github.com/omarshahine/valor-valor-cli.git
+cd valor-valor-cli
 npm install
 ```
 
@@ -63,25 +63,25 @@ npm run build
 ./fp off
 
 # Or use the CLI directly
-fireplace-cli status
-fireplace-cli temp 72
+valor-cli status
+valor-cli temp 72
 ```
 
 ### 5. Install Globally (Optional)
 ```bash
 npm link
-fireplace-cli status  # Use from anywhere
+valor-cli status  # Use from anywhere
 ```
 
 ## Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `status` | Get fireplace status | `fireplace-cli status` |
-| `on` | Turn on (starts at 68°F/20°C) | `fireplace-cli on` |
-| `off` | Turn off safely | `fireplace-cli off` |
-| `temp <value>` | Set temperature | `fireplace-cli temp 72` |
-| `mode <mode>` | Set mode | `fireplace-cli mode eco` |
+| `status` | Get fireplace status | `valor-cli status` |
+| `on` | Turn on (starts at 68°F/20°C) | `valor-cli on` |
+| `off` | Turn off safely | `valor-cli off` |
+| `temp <value>` | Set temperature | `valor-cli temp 72` |
+| `mode <mode>` | Set mode | `valor-cli mode eco` |
 
 ### Available Modes
 - `temperature` - Temperature control mode
@@ -119,7 +119,7 @@ source ~/.zshrc
 
 ### Method 3: Command Argument
 ```bash
-fireplace-cli status 192.168.1.141
+valor-cli status 192.168.1.141
 ```
 
 ## Temperature Guide
@@ -151,17 +151,17 @@ fireplace-cli status 192.168.1.141
 ### Basic Usage
 ```bash
 # Check status
-fireplace-cli status
+valor-cli status
 
 # Turn on and set temperature
-fireplace-cli on
-fireplace-cli temp 72
+valor-cli on
+valor-cli temp 72
 
 # Change mode
-fireplace-cli mode eco
+valor-cli mode eco
 
 # Turn off
-fireplace-cli off
+valor-cli off
 ```
 
 ### With Wrapper Script
@@ -189,7 +189,7 @@ Reachable:          Yes
 ## Project Structure
 
 ```
-valor-fireplace-cli/
+valor-valor-cli/
 ├── src/                    # TypeScript source code
 │   ├── cli.ts             # Main CLI interface
 │   ├── controllers/       # Fireplace control logic
@@ -220,7 +220,7 @@ npm run clean && npm run build
 ### Install Globally
 ```bash
 npm link
-fireplace-cli status
+valor-cli status
 ```
 
 ## Distribution
@@ -229,8 +229,8 @@ This project is **standalone** and can be:
 
 1. **Cloned and used locally:**
    ```bash
-   git clone https://github.com/yourusername/valor-fireplace-cli.git
-   cd valor-fireplace-cli
+   git clone https://github.com/yourusername/valor-valor-cli.git
+   cd valor-valor-cli
    npm install
    npm run build
    ./fp status
@@ -238,8 +238,8 @@ This project is **standalone** and can be:
 
 2. **Installed globally:**
    ```bash
-   npm install -g valor-fireplace-cli
-   fireplace-cli status
+   npm install -g valor-valor-cli
+   valor-cli status
    ```
 
 3. **Shared as source:**

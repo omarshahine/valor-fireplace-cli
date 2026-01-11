@@ -6,7 +6,7 @@
   "author": "Omar Shahine",
   "main": "dist/cli.js",
   "bin": {
-    "fireplace-cli": "./dist/cli.js"
+    "valor-cli": "./dist/cli.js"
   },
   "repository": {
     "type": "git",

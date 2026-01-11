@@ -49,10 +49,10 @@
 ./fp off
 ```
 
-### Option 2: Use fireplace-cli directly
+### Option 2: Use valor-cli directly
 ```bash
-fireplace-cli status
-fireplace-cli temp 72
+valor-cli status
+valor-cli temp 72
 ```
 
 ### Option 3: Run from dist folder
