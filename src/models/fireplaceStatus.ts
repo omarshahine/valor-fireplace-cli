@@ -12,13 +12,14 @@ export class FireplaceStatus {
   constructor(status: string) {
     const modeBits = status.substring(24, 25);
     const statusBits = status.substring(16, 20);
+    const modeEndByte = status.substring(status.length - 2);
     this.shuttingDown = fromBitStatus(statusBits, 7);
     this.guardFlameOn = fromBitStatus(statusBits, 8);
     this.igniting = fromBitStatus(statusBits, 11);
     this.currentTemperature = parseInt("0x" + status.substring(28, 32)) / 10;
     this.targetTemperature = parseInt("0x" + status.substring(32, 36)) / 10;
     this.auxOn = fromBitStatus(statusBits, 12);
-    let opMode = operationModeOfBits(modeBits);
+    let opMode = operationModeOfBits(modeBits, modeEndByte);
     if (!this.guardFlameOn || this.shuttingDown) {
       opMode = OperationMode.Off;
     }
@@ -38,14 +39,26 @@ export class FireplaceStatus {
   }
 }
 
-function operationModeOfBits(mode: string) {
+function operationModeOfBits(mode: string, endByte: string) {
+  // First check the mode bit at position 24
   switch (mode) {
     case "1":
       return OperationMode.Temperature;
     case "2":
       return OperationMode.Eco;
     default:
-      return OperationMode.Manual;
+      // For mode "0", check the end byte to distinguish
+      // between remote thermostat mode and manual mode
+      switch (endByte) {
+        case "01": // CLI Temperature mode
+        case "02": // Remote Temperature mode (variant)
+        case "04": // Remote: Temp, Timer, or Schedule mode
+          return OperationMode.Temperature;
+        case "08": // Remote: Flame Height (Manual)
+          return OperationMode.Manual;
+        default:
+          return OperationMode.Manual;
+      }
   }
 }
 

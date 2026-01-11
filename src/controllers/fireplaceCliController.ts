@@ -230,6 +230,21 @@ export class FireplaceCliController extends EventEmitter {
     }
   }
 
+  private formatStatus(status: FireplaceStatus): string {
+    const lines = [
+      "──────────────────────────────────────",
+      `Mode:               ${OperationMode[status.mode]}`,
+      `Current Temp:       ${TemperatureConverter.formatTemperature(status.currentTemperature, this.useFahrenheit)}`,
+      `Target Temp:        ${TemperatureConverter.formatTemperature(status.targetTemperature, this.useFahrenheit)}`,
+      `Guard Flame:        ${status.guardFlameOn ? "On" : "Off"}`,
+      `Igniting:           ${status.igniting ? "Yes" : "No"}`,
+      `Shutting Down:      ${status.shuttingDown ? "Yes" : "No"}`,
+      `Aux On:             ${status.auxOn ? "Yes" : "No"}`,
+      "──────────────────────────────────────",
+    ];
+    return lines.join("\n");
+  }
+
   // Public CLI methods
   public async turnOn() {
     try {
@@ -240,7 +255,7 @@ export class FireplaceCliController extends EventEmitter {
       const status = await this.refreshStatus();
       if (status) {
         console.log("\nFireplace Status:");
-        console.log(status.toString());
+        console.log(this.formatStatus(status));
       }
       console.log("✓ Fireplace turned on");
     } finally {
@@ -257,7 +272,7 @@ export class FireplaceCliController extends EventEmitter {
       const status = await this.refreshStatus();
       if (status) {
         console.log("\nFireplace Status:");
-        console.log(status.toString());
+        console.log(this.formatStatus(status));
       }
       console.log("✓ Fireplace turned off");
     } finally {
@@ -272,30 +287,7 @@ export class FireplaceCliController extends EventEmitter {
 
       if (status) {
         console.log("Fireplace Status:");
-        console.log("──────────────────────────────────────");
-        console.log(`Mode:               ${OperationMode[status.mode]}`);
-        console.log(
-          `Current Temp:       ${TemperatureConverter.formatTemperature(
-            status.currentTemperature,
-            this.useFahrenheit
-          )}`
-        );
-        console.log(
-          `Target Temp:        ${TemperatureConverter.formatTemperature(
-            status.targetTemperature,
-            this.useFahrenheit
-          )}`
-        );
-        console.log(
-          `Guard Flame:        ${status.guardFlameOn ? "On" : "Off"}`
-        );
-        console.log(`Igniting:           ${status.igniting ? "Yes" : "No"}`);
-        console.log(
-          `Shutting Down:      ${status.shuttingDown ? "Yes" : "No"}`
-        );
-        console.log(`Aux On:             ${status.auxOn ? "Yes" : "No"}`);
-        console.log(`Reachable:          ${this.reachable() ? "Yes" : "No"}`);
-        console.log("──────────────────────────────────────");
+        console.log(this.formatStatus(status));
       } else {
         console.log("Unable to retrieve status");
       }
@@ -313,7 +305,7 @@ export class FireplaceCliController extends EventEmitter {
       const status = await this.refreshStatus();
       if (status) {
         console.log("\nFireplace Status:");
-        console.log(status.toString());
+        console.log(this.formatStatus(status));
       }
       console.log(`✓ Mode set to ${OperationMode[mode]}`);
     } finally {
@@ -350,7 +342,7 @@ export class FireplaceCliController extends EventEmitter {
       const status = await this.refreshStatus();
       if (status) {
         console.log("\nFireplace Status:");
-        console.log(status.toString());
+        console.log(this.formatStatus(status));
       }
       console.log(
         `✓ Temperature set to ${TemperatureConverter.formatTemperature(
