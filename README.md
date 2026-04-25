@@ -27,14 +27,22 @@ This WiFi module enables TCP/IP control over your local network, which is what t
 
 ## Quick Start
 
-### 1. Clone and Install
+### Install from npm (recommended)
 ```bash
-git clone https://github.com/omarshahine/valor-valor-cli.git
-cd valor-valor-cli
-npm install
+npm install -g valor-fireplace-cli
 ```
 
-### 2. Configure Your Fireplace
+This installs the `valor-cli` command globally. Skip ahead to **Configure Your Fireplace**.
+
+### Or install from source
+```bash
+git clone https://github.com/omarshahine/valor-fireplace-cli.git
+cd valor-fireplace-cli
+npm install
+npm run build
+```
+
+### Configure Your Fireplace
 ```bash
 # Copy the example configuration
 cp .fireplace-config.example .fireplace-config
@@ -49,28 +57,17 @@ FIREPLACE_IP=192.168.1.XXX  # Replace with your fireplace's IP
 TEMPERATURE_UNIT=F          # F for Fahrenheit, C for Celsius
 ```
 
-### 3. Build
+### Use It
 ```bash
-npm run build
-```
-
-### 4. Use It!
-```bash
-# Using the wrapper script (easiest)
-./fp status
-./fp temp 72
-./fp on
-./fp off
-
-# Or use the CLI directly
+# If installed via npm
 valor-cli status
 valor-cli temp 72
-```
+valor-cli on
+valor-cli off
 
-### 5. Install Globally (Optional)
-```bash
-npm link
-valor-cli status  # Use from anywhere
+# If running from source, the wrapper script is handy
+./fp status
+./fp temp 72
 ```
 
 ## Commands
@@ -189,7 +186,7 @@ Reachable:          Yes
 ## Project Structure
 
 ```
-valor-valor-cli/
+valor-fireplace-cli/
 ├── src/                    # TypeScript source code
 │   ├── cli.ts             # Main CLI interface
 │   ├── controllers/       # Fireplace control logic
@@ -229,8 +226,8 @@ This project is **standalone** and can be:
 
 1. **Cloned and used locally:**
    ```bash
-   git clone https://github.com/yourusername/valor-valor-cli.git
-   cd valor-valor-cli
+   git clone https://github.com/yourusername/valor-fireplace-cli.git
+   cd valor-fireplace-cli
    npm install
    npm run build
    ./fp status
@@ -238,7 +235,7 @@ This project is **standalone** and can be:
 
 2. **Installed globally:**
    ```bash
-   npm install -g valor-valor-cli
+   npm install -g valor-fireplace-cli
    valor-cli status
    ```
 

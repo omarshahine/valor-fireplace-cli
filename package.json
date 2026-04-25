@@ -16,10 +16,17 @@
     "url": "https://github.com/omarshahine/valor-fireplace-cli/issues"
   },
   "homepage": "https://github.com/omarshahine/valor-fireplace-cli#readme",
+  "engines": {
+    "node": ">=14.18.1"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rimraf ./dist && tsc && chmod +x dist/cli.js",
     "start": "npm run build && node dist/cli.js",
-    "clean": "rimraf ./dist"
+    "clean": "rimraf ./dist",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "fireplace",
