@@ -1,6 +1,6 @@
 # 🔥 Valor Fireplace CLI
 
-[![Node.js](https://img.shields.io/badge/node-%3E%3D14.18.1-brightgreen)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/typescript-4.4.4-blue)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
@@ -241,7 +241,7 @@ This project is **standalone** and can be:
 
 3. **Shared as source:**
    - Zip the folder
-   - Recipients need Node.js >= 14.18.1
+   - Recipients need Node.js >= 20
    - Run `npm install && npm run build`
 
 ## Technical Details
@@ -292,7 +292,7 @@ npm run build
 
 ## System Requirements
 
-- Node.js >= 14.18.1
+- Node.js >= 20
 - TypeScript >= 4.4.4
 - macOS, Linux, or Windows with WSL
 
