@@ -105,10 +105,10 @@ export class FireplaceCliController extends EventEmitter {
         if (stx > 0) this.rxBuffer = this.rxBuffer.subarray(stx);
         return;
       }
-      const payload = this.rxBuffer.subarray(stx + 1, etx).toString();
+      const payloadBuf = this.rxBuffer.subarray(stx + 1, etx);
       this.rxBuffer = this.rxBuffer.subarray(etx + 1);
-      if (payload.length === FireplaceCliController.STATUS_PACKET_LENGTH) {
-        this.processStatusResponse(payload);
+      if (payloadBuf.length === FireplaceCliController.STATUS_PACKET_LENGTH) {
+        this.processStatusResponse(payloadBuf.toString("ascii"));
       }
     }
   }
@@ -269,6 +269,7 @@ export class FireplaceCliController extends EventEmitter {
       let onStatus: ((s: FireplaceStatus) => void) | undefined;
       let timer: NodeJS.Timeout | undefined;
       try {
+        await this.sendCommand("303303");
         const wait = new Promise<FireplaceStatus>((resolve, reject) => {
           timer = setTimeout(
             () => reject(new Error("status response timeout")),
@@ -277,7 +278,6 @@ export class FireplaceCliController extends EventEmitter {
           onStatus = (s) => resolve(s);
           this.once("status", onStatus);
         });
-        await this.sendCommand("303303");
         const status = await wait;
         if (timer) clearTimeout(timer);
         return status;
@@ -297,6 +297,7 @@ export class FireplaceCliController extends EventEmitter {
     if (this.client) {
       this.client.destroy();
       this.client = null;
+      this.connectPromise = null;
     }
   }
 
