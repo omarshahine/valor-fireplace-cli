@@ -13,6 +13,8 @@ export class FireplaceCliController extends EventEmitter {
   private readonly useFahrenheit: boolean;
   private height = FlameHeight.Step11;
   private client: Socket | null = null;
+  private connectPromise: Promise<Socket> | null = null;
+  private rxBuffer: Buffer = Buffer.alloc(0);
   private lastContact: Date = new Date();
   private lastStatus: FireplaceStatus | undefined;
   private igniting = false;
@@ -21,6 +23,10 @@ export class FireplaceCliController extends EventEmitter {
   private static UNREACHABLE_TIMEOUT = 1000 * 60 * 5; //5 min
   private static REFRESH_TIMEOUT = 1000 * 15; //15 seconds
   private static STATUS_PACKET_LENGTH = 106; //characters
+  private static STATUS_RESPONSE_TIMEOUT = 5000; //5 seconds
+  private static CONNECT_TIMEOUT = 5000; //5 seconds
+  private static STX = 0x02;
+  private static ETX = 0x03;
 
   constructor(ip: string, useFahrenheit: boolean = true) {
     super();
@@ -51,7 +57,7 @@ export class FireplaceCliController extends EventEmitter {
     }
     console.log("Igniting fireplace...");
     this.igniting = true;
-    this.sendCommand("314103");
+    this.sendCommand("314103").catch(() => {});
     await this.delay(40_000);
     await this.refreshStatus();
   }
@@ -70,7 +76,7 @@ export class FireplaceCliController extends EventEmitter {
     }
     console.log("Turning off guard flame...");
     this.shuttingDown = true;
-    this.sendCommand("313003");
+    this.sendCommand("313003").catch(() => {});
     await this.delay(30_000);
   }
 
@@ -86,37 +92,82 @@ export class FireplaceCliController extends EventEmitter {
     return this.sendCommand("4232303103");
   }
 
-  private ensureClient(): Socket {
-    const ip = this.config.ip;
-    if (
-      !this.client ||
-      typeof this.client === "undefined" ||
-      typeof this.client.destroyed !== "boolean" ||
-      this.client.destroyed === true
-    ) {
-      this.client = new net.Socket();
-      this.client.connect(2000, ip);
-      this.client.setTimeout(FireplaceCliController.REFRESH_TIMEOUT);
-      this.client.on("data", (data) => {
-        const tempData = data.toString().substring(1, data.length - 1);
-        if (tempData.length === FireplaceCliController.STATUS_PACKET_LENGTH) {
-          this.processStatusResponse(tempData);
-        }
-      });
-      this.client.on("error", (err) => {
-        console.error("Socket error: " + err.message);
-        if (this.client && typeof this.client.destroy === "function") {
-          this.client.destroy();
-        }
-      });
+  private handleData(chunk: Buffer) {
+    this.rxBuffer = Buffer.concat([this.rxBuffer, chunk]);
+    while (true) {
+      const stx = this.rxBuffer.indexOf(FireplaceCliController.STX);
+      if (stx < 0) {
+        this.rxBuffer = Buffer.alloc(0);
+        return;
+      }
+      const etx = this.rxBuffer.indexOf(FireplaceCliController.ETX, stx + 1);
+      if (etx < 0) {
+        if (stx > 0) this.rxBuffer = this.rxBuffer.subarray(stx);
+        return;
+      }
+      const payloadBuf = this.rxBuffer.subarray(stx + 1, etx);
+      this.rxBuffer = this.rxBuffer.subarray(etx + 1);
+      if (payloadBuf.length === FireplaceCliController.STATUS_PACKET_LENGTH) {
+        this.processStatusResponse(payloadBuf.toString("ascii"));
+      }
     }
-    return this.client;
   }
 
-  private sendCommand(command: string): boolean {
+  private ensureClient(): Promise<Socket> {
+    if (this.client && !this.client.destroyed && this.connectPromise) {
+      return this.connectPromise;
+    }
+
+    const ip = this.config.ip;
+    const sock = new net.Socket();
+    this.client = sock;
+    this.rxBuffer = Buffer.alloc(0);
+
+    this.connectPromise = new Promise<Socket>((resolve, reject) => {
+      const connectTimer = setTimeout(() => {
+        sock.destroy();
+        reject(new Error(`Connection to ${ip}:2000 timed out`));
+      }, FireplaceCliController.CONNECT_TIMEOUT);
+
+      sock.once("connect", () => {
+        clearTimeout(connectTimer);
+        sock.setTimeout(FireplaceCliController.REFRESH_TIMEOUT);
+        resolve(sock);
+      });
+
+      sock.once("error", (err) => {
+        clearTimeout(connectTimer);
+        reject(err);
+      });
+
+      sock.on("close", () => {
+        if (this.client === sock) {
+          this.client = null;
+          this.connectPromise = null;
+          this.rxBuffer = Buffer.alloc(0);
+        }
+      });
+
+      sock.on("data", (data) => this.handleData(data));
+
+      sock.connect(2000, ip);
+    }).catch((err) => {
+      sock.destroy();
+      if (this.client === sock) {
+        this.client = null;
+        this.connectPromise = null;
+      }
+      throw err;
+    });
+
+    return this.connectPromise;
+  }
+
+  private async sendCommand(command: string): Promise<boolean> {
     const prefix = "0233303330333033303830";
     const packet = Buffer.from(prefix + command, "hex");
-    return this.ensureClient().write(packet);
+    const sock = await this.ensureClient();
+    return sock.write(packet);
   }
 
   private reachable(): boolean {
@@ -129,7 +180,7 @@ export class FireplaceCliController extends EventEmitter {
 
   private resetFlameHeight(): void {
     const msg = "3136" + FlameHeight.Step11 + "03";
-    this.sendCommand(msg);
+    this.sendCommand(msg).catch(() => {});
   }
 
   private async setFlameHeight(temperature: number) {
@@ -140,12 +191,12 @@ export class FireplaceCliController extends EventEmitter {
     this.resetFlameHeight();
     await this.delay(10_000);
     const msg = "3136" + height + "03";
-    this.sendCommand(msg);
+    this.sendCommand(msg).catch(() => {});
     await this.delay(1_000);
   }
 
   private async setTemperatureInternal(temperature: number) {
-    this.setTemperatureMode();
+    this.setTemperatureMode().catch(() => {});
     await this.delay(1_000);
     if (this?.lastStatus?.targetTemperature !== temperature) {
       await this.setTemperatureValue(temperature);
@@ -155,7 +206,7 @@ export class FireplaceCliController extends EventEmitter {
   private async setTemperatureValue(temperature: number) {
     const value = TemperatureRangeUtils.toBits(temperature);
     const msg = "42324644303" + value + "03";
-    this.sendCommand(msg);
+    this.sendCommand(msg).catch(() => {});
     await this.delay(1_000);
   }
 
@@ -193,14 +244,14 @@ export class FireplaceCliController extends EventEmitter {
 
     switch (mode) {
       case OperationMode.Manual:
-        this.setManualMode();
+        this.setManualMode().catch(() => {});
         await this.delay(2_000);
         this.setFlameHeight(targetTemperature);
         break;
       case OperationMode.Eco:
         this.setFlameHeight(targetTemperature);
         await this.delay(2_000);
-        this.setEcoMode();
+        this.setEcoMode().catch(() => {});
         break;
       case OperationMode.Temperature:
         await this.setTemperatureInternal(targetTemperature);
@@ -213,20 +264,40 @@ export class FireplaceCliController extends EventEmitter {
   }
 
   private async refreshStatus(): Promise<FireplaceStatus | undefined> {
-    try {
-      this.sendCommand("303303");
-      await this.delay(2_000);
-      return this.lastStatus;
-    } catch (error) {
-      console.error("Failed to refresh status");
-      throw error;
+    const MAX_ATTEMPTS = 2;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      let onStatus: ((s: FireplaceStatus) => void) | undefined;
+      let timer: NodeJS.Timeout | undefined;
+      try {
+        await this.sendCommand("303303");
+        const wait = new Promise<FireplaceStatus>((resolve, reject) => {
+          timer = setTimeout(
+            () => reject(new Error("status response timeout")),
+            FireplaceCliController.STATUS_RESPONSE_TIMEOUT
+          );
+          onStatus = (s) => resolve(s);
+          this.once("status", onStatus);
+        });
+        const status = await wait;
+        if (timer) clearTimeout(timer);
+        return status;
+      } catch (err) {
+        if (onStatus) this.off("status", onStatus);
+        if (timer) clearTimeout(timer);
+        if (attempt === MAX_ATTEMPTS) {
+          return undefined;
+        }
+        await this.delay(500);
+      }
     }
+    return undefined;
   }
 
   private closeConnection() {
     if (this.client) {
       this.client.destroy();
       this.client = null;
+      this.connectPromise = null;
     }
   }
 
