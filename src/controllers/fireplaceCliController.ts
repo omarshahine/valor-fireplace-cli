@@ -321,13 +321,16 @@ export class FireplaceCliController extends EventEmitter {
     ];
     if (status.lockoutSuspected) {
       lines.push(
-        "⚠ Lockout suspected: Igniting=Yes with Guard Flame=Off and",
-        "  no Shutting Down. The Mertik GV60 valve likely tried to",
-        "  light, the thermopile never sensed flame, and the receiver",
-        "  tripped its safety lockout. Common causes: cold thermopile,",
-        "  air in the pilot line, low LP pressure, fouled spark gap.",
-        "  Recovery typically needs intervention at the appliance",
-        "  (cycle gas at the wall, retry ignition, or service call).",
+        "⚠ Possible lockout OR active ignition in progress.",
+        "  Bit pattern is Igniting=Yes with Guard Flame=Off and",
+        "  no Shutting Down. The first ~20-40s of any normal",
+        "  ignition also looks like this — a single snapshot",
+        "  can't disambiguate. Re-run `valor-cli status` in 60s.",
+        "  If the pattern persists, the Mertik GV60 valve has",
+        "  tripped its safety lockout (cold thermopile, air in",
+        "  pilot line, low LP pressure, or fouled spark gap).",
+        "  Recovery needs on-site intervention (cycle gas at the",
+        "  wall, retry ignition, or service call).",
         "──────────────────────────────────────",
       );
     }

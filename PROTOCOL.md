@@ -195,6 +195,15 @@ power-cycle or paperclip reset. Recovery generally requires on-site
 intervention (cycle gas at the wall, retry ignition, or service the
 fireplace).
 
+**Important caveat:** the same three-bit pattern is also produced during
+the first ~20-40s of any *normal* ignition, before the thermopile confirms
+flame. A single status snapshot cannot distinguish "still lighting" from
+"stuck in lockout". The signal is reliable only when the pattern persists
+across multiple reads. Programmatic callers should use a consecutive-read
+threshold (the homebridge plugin uses 3) before treating it as a real
+lockout; the CLI's `status` command instead softens its warning and tells
+the user to re-run after 60s.
+
 Observed sample lockout packet (cabin module, 2026-05-16):
 
 ```

@@ -8,13 +8,19 @@ export class FireplaceStatus {
   public readonly igniting: boolean = false;
   public readonly guardFlameOn: boolean = false;
   public readonly shuttingDown: boolean = false;
-  /** Raw 4-char hex of the status bit field (chars 16-20). Useful for diagnostics. */
+  /** Raw 4-char hex of the status bit field (chars 16-19). Useful for diagnostics. */
   public readonly statusBitsHex: string = "";
   /**
-   * Heuristic: a Mertik GV60 ignition lockout looks like `igniting` set with
-   * no `guardFlameOn` and no `shuttingDown`. The valve tried to light, the
-   * thermopile never confirmed flame, and the receiver killed the gas. The
-   * `igniting` bit then stays set until a power-cycle or reset clears it.
+   * Heuristic candidate for a Mertik GV60 ignition lockout: `igniting=1` with
+   * `guardFlameOn=0` and `shuttingDown=0`. A real lockout looks exactly like
+   * this — the valve tried to light, the thermopile never confirmed flame, and
+   * the receiver killed the gas, leaving the `igniting` bit set until a reset.
+   *
+   * **The same pattern also holds for the first ~20-40 seconds of any normal
+   * ignition**, before the thermopile confirms flame. A single status snapshot
+   * cannot distinguish the two cases. Callers that need certainty should poll
+   * status repeatedly and look for the pattern to persist (the homebridge
+   * plugin's `FireplaceController` uses a 3-consecutive-reads threshold).
    * Empirically observed at the cabin on 2026-05-16.
    */
   public readonly lockoutSuspected: boolean = false;
