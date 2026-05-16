@@ -302,17 +302,35 @@ export class FireplaceCliController extends EventEmitter {
   }
 
   private formatStatus(status: FireplaceStatus): string {
+    const burnerPct = Math.round((status.burnerOutput / 255) * 100);
+    const lightPct = Math.round((status.lightBrightness / 255) * 100);
     const lines = [
       "──────────────────────────────────────",
-      `Mode:               ${OperationMode[status.mode]}`,
+      `Mode:               ${OperationMode[status.mode]}${status.scheduleActive ? " (schedule/timer)" : ""}`,
       `Current Temp:       ${TemperatureConverter.formatTemperature(status.currentTemperature, this.useFahrenheit)}`,
       `Target Temp:        ${TemperatureConverter.formatTemperature(status.targetTemperature, this.useFahrenheit)}`,
-      `Guard Flame:        ${status.guardFlameOn ? "On" : "Off"}`,
+      `Guard Flame:        ${status.guardFlameOn ? "On" : "Off"}${status.pilotOnly ? " (pilot only — burner off)" : ""}`,
+      `Burner Output:      ${burnerPct}%  (0x${status.burnerOutput.toString(16).toUpperCase().padStart(2, "0")})`,
       `Igniting:           ${status.igniting ? "Yes" : "No"}`,
       `Shutting Down:      ${status.shuttingDown ? "Yes" : "No"}`,
       `Aux On:             ${status.auxOn ? "Yes" : "No"}`,
+      `Fan Speed:          ${status.fanSpeed}/4`,
+      `Light:              ${status.lightOn ? "On" : "Off"} (brightness ${lightPct}%)`,
+      `Status Bits:        0x${status.statusBitsHex}`,
       "──────────────────────────────────────",
     ];
+    if (status.lockoutSuspected) {
+      lines.push(
+        "⚠ Lockout suspected: Igniting=Yes with Guard Flame=Off and",
+        "  no Shutting Down. The Mertik GV60 valve likely tried to",
+        "  light, the thermopile never sensed flame, and the receiver",
+        "  tripped its safety lockout. Common causes: cold thermopile,",
+        "  air in the pilot line, low LP pressure, fouled spark gap.",
+        "  Recovery typically needs intervention at the appliance",
+        "  (cycle gas at the wall, retry ignition, or service call).",
+        "──────────────────────────────────────",
+      );
+    }
     return lines.join("\n");
   }
 
