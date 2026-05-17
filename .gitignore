@@ -8,3 +8,4 @@ dist/
 
 # Personal configuration (contains IP address)
 .fireplace-config
+captures/

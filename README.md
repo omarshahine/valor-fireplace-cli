@@ -72,6 +72,8 @@ valor-cli off
 
 ## Commands
 
+### Control
+
 | Command | Description | Example |
 |---------|-------------|---------|
 | `status` | Get fireplace status | `valor-cli status` |
@@ -80,11 +82,41 @@ valor-cli off
 | `temp <value>` | Set temperature | `valor-cli temp 72` |
 | `mode <mode>` | Set mode | `valor-cli mode eco` |
 
+### Diagnostics
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `probe` | TCP liveness check with RTT (exit 0 if reachable) | `valor-cli probe` |
+| `raw <hex>` | Send arbitrary bytes for protocol exploration | `valor-cli raw 303303` |
+| `watch` | Tail status with timestamps until Ctrl+C | `valor-cli watch --interval=5000` |
+
+Use `probe` when the WiFi module's LEDs go red/green to check if local
+TCP control still works. Use `raw` and `watch` to investigate unmapped
+opcodes or capture state transitions — see [PROTOCOL.md](PROTOCOL.md).
+
 ### Available Modes
 - `temperature` - Temperature control mode
 - `manual` - Manual flame height control
 - `eco` - Energy saving mode
 - `off` - Turn off
+
+### Status Output
+
+`valor-cli status` decodes the live status packet, including a heuristic
+warning when the controller appears to be in a **Mertik GV60 ignition
+lockout** (failed-ignition state that requires on-site intervention).
+Output includes:
+
+- Current temperature, target temperature, mode
+- Burner output as a percent (`0-100%`) — actual modulated flame level
+- Pilot lit / shutting down / igniting / aux on flags
+- Fan speed (`0-4`)
+- Decorative light on/off plus brightness percent
+- Raw status bits in hex for diagnostics
+- Schedule/timer overlay indication when a remote program is driving the setpoint
+
+See [PROTOCOL.md](PROTOCOL.md) for the full wire-level reference and
+decoded packet layout.
 
 ## Configuration
 
@@ -98,6 +130,11 @@ FIREPLACE_IP=192.168.1.141
 # Default: F
 TEMPERATURE_UNIT=F
 ```
+
+The CLI looks for `.fireplace-config` first in the current directory and
+each parent directory, and falls back to `$HOME/.fireplace-config`. Drop
+one in your home directory if you want `valor-cli` to work from anywhere
+on a system-wide install.
 
 **Temperature Unit Options:**
 - `TEMPERATURE_UNIT=F` - Display and input temperatures in Fahrenheit (41-97°F)
