@@ -58,7 +58,15 @@ export class FireplaceCliController extends EventEmitter {
     console.log("Igniting fireplace...");
     this.igniting = true;
     this.sendCommand("314103").catch(() => {});
-    await this.delay(40_000);
+    // Poll until guardFlame catches (success) or we hit the ceiling. Mertik's
+    // own ignition cycle takes up to ~60s; we ceiling at 90s with a tick every
+    // 3s so the user sees the wait is real, not hung.
+    await this.waitForTransition({
+      label: "ignition",
+      ceilingMs: 90_000,
+      pollMs: 3_000,
+      done: (s) => s.guardFlameOn,
+    });
     await this.refreshStatus();
   }
 
@@ -77,7 +85,51 @@ export class FireplaceCliController extends EventEmitter {
     console.log("Turning off guard flame...");
     this.shuttingDown = true;
     this.sendCommand("313003").catch(() => {});
-    await this.delay(30_000);
+    // Empirically shutdown is fast (a few seconds — the gas valve closes and
+    // the pilot extinguishes). Poll for the guardFlame=false transition and
+    // return as soon as it lands, with a 30s ceiling.
+    await this.waitForTransition({
+      label: "shutdown",
+      ceilingMs: 30_000,
+      pollMs: 2_000,
+      done: (s) => !s.guardFlameOn,
+    });
+  }
+
+  /**
+   * Poll status until `done(status)` returns true, or we hit `ceilingMs`.
+   * Prints a "[ Ns ] <label>..." tick line on each poll so the user knows
+   * the command is alive. Used by ignite / shutdown to replace fixed-delay
+   * `await this.delay(N)` calls — startup and shutdown vary widely in
+   * duration so static delays are pessimistic for one and optimistic for
+   * the other.
+   */
+  private async waitForTransition(opts: {
+    label: string;
+    ceilingMs: number;
+    pollMs: number;
+    done: (s: FireplaceStatus) => boolean;
+  }): Promise<boolean> {
+    const start = Date.now();
+    while (Date.now() - start < opts.ceilingMs) {
+      await this.delay(opts.pollMs);
+      try {
+        await this.sendCommand("303303");
+      } catch {
+        /* ignore — next poll will retry */
+      }
+      await this.delay(500); // give the response time to arrive
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      const s = this.lastStatus;
+      if (s && opts.done(s)) {
+        console.log(`[${elapsed}s] ${opts.label} complete.`);
+        return true;
+      }
+      console.log(`[${elapsed}s] waiting for ${opts.label}...`);
+    }
+    const elapsed = Math.round((Date.now() - start) / 1000);
+    console.log(`[${elapsed}s] ${opts.label} did not complete within ${Math.round(opts.ceilingMs / 1000)}s ceiling.`);
+    return false;
   }
 
   private setEcoMode() {
@@ -302,7 +354,13 @@ export class FireplaceCliController extends EventEmitter {
   }
 
   private formatStatus(status: FireplaceStatus): string {
-    const burnerPct = Math.round((status.burnerOutput / 255) * 100);
+    // Chars 14-15 linger at the last in-flight value after shutdown (firmware
+    // doesn't clear them). Gate the displayed percent on guardFlameOn so a
+    // post-shutdown read doesn't claim "Burner Output: 91%" while the pilot
+    // is dead. Raw byte is still in `status.burnerOutput` for diagnostics.
+    const burnerPct = status.guardFlameOn
+      ? Math.round((status.burnerOutput / 255) * 100)
+      : 0;
     const lightPct = Math.round((status.lightBrightness / 255) * 100);
     const lines = [
       "──────────────────────────────────────",
