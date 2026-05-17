@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-05-17
+
+### Fixed
+- **Shutdown ceiling bumped from 30s to 45s.** First real-world `off` cycle after the 1.1.0 polling rewrite took 26 seconds — comfortably completed but only 4s of headroom on the old 30s ceiling. The 1.1.0 commit message and changelog had incorrectly described shutdown as "fast (3-5s)" based on a guess; the empirical reality is that gas valve close + pilot millivolt decay + thermopile latch release commonly takes 25-30s. New ceiling gives ~19s of headroom. Comment in `guardFlameOff()` updated to match.
+
 ## [1.1.0] - 2026-05-17
 
 ### Added
