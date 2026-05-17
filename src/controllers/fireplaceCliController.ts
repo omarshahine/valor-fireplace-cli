@@ -86,12 +86,13 @@ export class FireplaceCliController extends EventEmitter {
     console.log("Turning off guard flame...");
     this.shuttingDown = true;
     this.sendCommand("313003").catch(() => {});
-    // Empirically shutdown is fast (a few seconds — the gas valve closes and
-    // the pilot extinguishes). Poll for the guardFlame=false transition and
-    // return as soon as it lands, with a 30s ceiling.
+    // Empirically shutdown takes ~25-30s on a warm system (gas valve closes,
+    // pilot millivolts decay, thermopile latch releases). One observed run
+    // at 2026-05-17 completed in 26s — comfortably under the 45s ceiling
+    // but the previous 30s was cutting it close. Bumped to 45s for headroom.
     return this.waitForTransition({
       label: "shutdown",
-      ceilingMs: 30_000,
+      ceilingMs: 45_000,
       pollMs: 2_000,
       done: (s) => !s.guardFlameOn,
     });
