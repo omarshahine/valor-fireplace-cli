@@ -50,16 +50,25 @@ export class FireplaceCliController extends EventEmitter {
     }
   }
 
-  private async igniteFireplace() {
+  private async igniteFireplace(): Promise<boolean> {
     if (this.igniting) {
       console.log("Already igniting...");
-      return;
+      return true;
     }
     console.log("Igniting fireplace...");
     this.igniting = true;
     this.sendCommand("314103").catch(() => {});
-    await this.delay(40_000);
+    // Poll until guardFlame catches (success) or we hit the ceiling. Mertik's
+    // own ignition cycle takes up to ~60s; we ceiling at 90s with a tick every
+    // 3s so the user sees the wait is real, not hung.
+    const ok = await this.waitForTransition({
+      label: "ignition",
+      ceilingMs: 90_000,
+      pollMs: 3_000,
+      done: (s) => s.guardFlameOn,
+    });
     await this.refreshStatus();
+    return ok;
   }
 
   private async standBy() {
@@ -69,15 +78,84 @@ export class FireplaceCliController extends EventEmitter {
     return this.sendCommand(msg);
   }
 
-  private async guardFlameOff() {
+  private async guardFlameOff(): Promise<boolean> {
     if (this.shuttingDown) {
       console.log("Already shutting down...");
-      return;
+      return true;
     }
     console.log("Turning off guard flame...");
     this.shuttingDown = true;
     this.sendCommand("313003").catch(() => {});
-    await this.delay(30_000);
+    // Empirically shutdown is fast (a few seconds — the gas valve closes and
+    // the pilot extinguishes). Poll for the guardFlame=false transition and
+    // return as soon as it lands, with a 30s ceiling.
+    return this.waitForTransition({
+      label: "shutdown",
+      ceilingMs: 30_000,
+      pollMs: 2_000,
+      done: (s) => !s.guardFlameOn,
+    });
+  }
+
+  /**
+   * Poll status until `done(status)` returns true, or we hit `ceilingMs`.
+   * Prints a "[ Ns ] <label>..." tick line on each poll so the user knows
+   * the command is alive. Used by ignite / shutdown to replace fixed-delay
+   * `await this.delay(N)` calls — startup and shutdown vary widely in
+   * duration so static delays are pessimistic for one and optimistic for
+   * the other.
+   */
+  private async waitForTransition(opts: {
+    label: string;
+    ceilingMs: number;
+    pollMs: number;
+    done: (s: FireplaceStatus) => boolean;
+  }): Promise<boolean> {
+    const start = Date.now();
+    while (Date.now() - start < opts.ceilingMs) {
+      await this.delay(opts.pollMs);
+      const responsePromise = this.waitForNextStatus(
+        FireplaceCliController.STATUS_RESPONSE_TIMEOUT,
+      );
+      try {
+        await this.sendCommand("303303");
+      } catch {
+        /* ignore — wait for response anyway, next poll will retry if empty */
+      }
+      const s = await responsePromise;
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      if (s && opts.done(s)) {
+        console.log(`[${elapsed}s] ${opts.label} complete.`);
+        return true;
+      }
+      console.log(`[${elapsed}s] waiting for ${opts.label}...`);
+    }
+    const elapsed = Math.round((Date.now() - start) / 1000);
+    console.log(`[${elapsed}s] ${opts.label} did not complete within ${Math.round(opts.ceilingMs / 1000)}s ceiling.`);
+    return false;
+  }
+
+  /**
+   * Wait for the next `status` event (or the existing `lastStatus` if a
+   * response arrives via a concurrent handler before we subscribe). Returns
+   * `undefined` if no fresh status arrives within `timeoutMs`. Used by
+   * `waitForTransition` to avoid the hard-coded 500ms wait that risks
+   * reading stale `lastStatus` when the device takes longer to respond.
+   */
+  private waitForNextStatus(timeoutMs: number): Promise<FireplaceStatus | undefined> {
+    return new Promise((resolve) => {
+      let resolved = false;
+      const finish = (s: FireplaceStatus | undefined) => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timer);
+        this.removeListener("status", handler);
+        resolve(s);
+      };
+      const handler = (s: FireplaceStatus) => finish(s);
+      const timer = setTimeout(() => finish(this.lastStatus), timeoutMs);
+      this.once("status", handler);
+    });
   }
 
   private setEcoMode() {
@@ -228,9 +306,9 @@ export class FireplaceCliController extends EventEmitter {
       !this.lastStatus?.guardFlameOn
     ) {
       console.log("Igniting fireplace first...");
-      await this.igniteFireplace();
+      const ignited = await this.igniteFireplace();
       await this.delay(5_000);
-      return false;
+      return ignited;
     }
 
     if (currentMode === mode) {
@@ -257,8 +335,7 @@ export class FireplaceCliController extends EventEmitter {
         await this.setTemperatureInternal(targetTemperature);
         break;
       case OperationMode.Off:
-        await this.guardFlameOff();
-        break;
+        return this.guardFlameOff();
     }
     return true;
   }
@@ -302,7 +379,13 @@ export class FireplaceCliController extends EventEmitter {
   }
 
   private formatStatus(status: FireplaceStatus): string {
-    const burnerPct = Math.round((status.burnerOutput / 255) * 100);
+    // Chars 14-15 linger at the last in-flight value after shutdown (firmware
+    // doesn't clear them). Gate the displayed percent on guardFlameOn so a
+    // post-shutdown read doesn't claim "Burner Output: 91%" while the pilot
+    // is dead. Raw byte is still in `status.burnerOutput` for diagnostics.
+    const burnerPct = status.guardFlameOn
+      ? Math.round((status.burnerOutput / 255) * 100)
+      : 0;
     const lightPct = Math.round((status.lightBrightness / 255) * 100);
     const lines = [
       "──────────────────────────────────────",
@@ -342,14 +425,18 @@ export class FireplaceCliController extends EventEmitter {
     try {
       console.log("Turning on fireplace...");
       await this.refreshStatus();
-      await this.setModeInternal(OperationMode.Temperature, 20);
+      const ok = await this.setModeInternal(OperationMode.Temperature, 20);
       await this.delay(5_000);
       const status = await this.refreshStatus();
       if (status) {
         console.log("\nFireplace Status:");
         console.log(this.formatStatus(status));
       }
-      console.log("✓ Fireplace turned on");
+      if (ok && status?.guardFlameOn) {
+        console.log("✓ Fireplace turned on");
+      } else {
+        console.log("⚠ Turn-on did not complete — see status above. Try again or check the appliance.");
+      }
     } finally {
       this.closeConnection();
     }
@@ -359,14 +446,18 @@ export class FireplaceCliController extends EventEmitter {
     try {
       console.log("Turning off fireplace...");
       await this.refreshStatus();
-      await this.setModeInternal(OperationMode.Off);
+      const ok = await this.setModeInternal(OperationMode.Off);
       await this.delay(5_000);
       const status = await this.refreshStatus();
       if (status) {
         console.log("\nFireplace Status:");
         console.log(this.formatStatus(status));
       }
-      console.log("✓ Fireplace turned off");
+      if (ok && !status?.guardFlameOn) {
+        console.log("✓ Fireplace turned off");
+      } else {
+        console.log("⚠ Shutdown did not complete within the timeout — see status above. The receiver may still be in transition; re-run `valor-cli status` in a few seconds.");
+      }
     } finally {
       this.closeConnection();
     }
