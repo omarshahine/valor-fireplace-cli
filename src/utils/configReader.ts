@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 
 export interface FireplaceConfig {
@@ -59,7 +60,9 @@ export class ConfigReader {
   }
 
   /**
-   * Find .fireplace-config file in current directory or parent directories
+   * Find .fireplace-config: walk up from CWD, then fall back to $HOME.
+   * The $HOME fallback matters for system-wide installs (e.g. on a Pi)
+   * where the user runs `valor-cli` from arbitrary directories.
    */
   private static findConfigFile(): string | null {
     let currentDir = process.cwd();
@@ -73,10 +76,14 @@ export class ConfigReader {
       currentDir = path.dirname(currentDir);
     }
 
-    // Check root directory
     const rootConfigPath = path.join(root, this.CONFIG_FILE);
     if (fs.existsSync(rootConfigPath)) {
       return rootConfigPath;
+    }
+
+    const homeConfigPath = path.join(os.homedir(), this.CONFIG_FILE);
+    if (fs.existsSync(homeConfigPath)) {
+      return homeConfigPath;
     }
 
     return null;

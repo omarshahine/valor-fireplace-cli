@@ -302,17 +302,38 @@ export class FireplaceCliController extends EventEmitter {
   }
 
   private formatStatus(status: FireplaceStatus): string {
+    const burnerPct = Math.round((status.burnerOutput / 255) * 100);
+    const lightPct = Math.round((status.lightBrightness / 255) * 100);
     const lines = [
       "──────────────────────────────────────",
-      `Mode:               ${OperationMode[status.mode]}`,
+      `Mode:               ${OperationMode[status.mode]}${status.scheduleActive ? " (schedule/timer)" : ""}`,
       `Current Temp:       ${TemperatureConverter.formatTemperature(status.currentTemperature, this.useFahrenheit)}`,
       `Target Temp:        ${TemperatureConverter.formatTemperature(status.targetTemperature, this.useFahrenheit)}`,
-      `Guard Flame:        ${status.guardFlameOn ? "On" : "Off"}`,
+      `Guard Flame:        ${status.guardFlameOn ? "On" : "Off"}${status.pilotOnly ? " (pilot only — burner off)" : ""}`,
+      `Burner Output:      ${burnerPct}%  (0x${status.burnerOutput.toString(16).toUpperCase().padStart(2, "0")})`,
       `Igniting:           ${status.igniting ? "Yes" : "No"}`,
       `Shutting Down:      ${status.shuttingDown ? "Yes" : "No"}`,
       `Aux On:             ${status.auxOn ? "Yes" : "No"}`,
+      `Fan Speed:          ${status.fanSpeed}/4`,
+      `Light:              ${status.lightOn ? "On" : "Off"} (brightness ${lightPct}%)`,
+      `Status Bits:        0x${status.statusBitsHex}`,
       "──────────────────────────────────────",
     ];
+    if (status.lockoutSuspected) {
+      lines.push(
+        "⚠ Possible lockout OR active ignition in progress.",
+        "  Bit pattern is Igniting=Yes with Guard Flame=Off and",
+        "  no Shutting Down. The first ~20-40s of any normal",
+        "  ignition also looks like this — a single snapshot",
+        "  can't disambiguate. Re-run `valor-cli status` in 60s.",
+        "  If the pattern persists, the Mertik GV60 valve has",
+        "  tripped its safety lockout (cold thermopile, air in",
+        "  pilot line, low LP pressure, or fouled spark gap).",
+        "  Recovery needs on-site intervention (cycle gas at the",
+        "  wall, retry ignition, or service call).",
+        "──────────────────────────────────────",
+      );
+    }
     return lines.join("\n");
   }
 
