@@ -9,3 +9,6 @@ dist/
 # Personal configuration (contains IP address)
 .fireplace-config
 captures/
+
+# Clawpatch local review state
+.clawpatch/
