@@ -84,7 +84,7 @@ export class ProtocolExplorer {
         sock.write(packet);
       });
 
-      sock.on("data", (chunk) => {
+      sock.on("data", (chunk: Buffer) => {
         buffer = Buffer.concat([buffer, chunk]);
         const stx = buffer.indexOf(STX);
         const etx = stx >= 0 ? buffer.indexOf(ETX, stx + 1) : -1;
@@ -206,7 +206,7 @@ export class ProtocolExplorer {
         completeAfter(timeoutMs);
       });
 
-      sock.on("data", (chunk) => {
+      sock.on("data", (chunk: Buffer) => {
         buffer = Buffer.concat([buffer, chunk]);
         // Reset read timer on each new chunk so we capture multi-packet responses.
         completeAfter(Math.min(timeoutMs, 500));
@@ -276,7 +276,7 @@ export class ProtocolExplorer {
       pollTimer = setInterval(send, pollIntervalMs);
     });
 
-    sock.on("data", (chunk) => {
+    sock.on("data", (chunk: Buffer) => {
       buffer = Buffer.concat([buffer, chunk]);
       while (true) {
         const stx = buffer.indexOf(STX);

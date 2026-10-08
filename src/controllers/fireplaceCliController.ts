@@ -227,7 +227,7 @@ export class FireplaceCliController extends EventEmitter {
         }
       });
 
-      sock.on("data", (data) => this.handleData(data));
+      sock.on("data", (data: Buffer) => this.handleData(data));
 
       sock.connect(2000, ip);
     }).catch((err) => {
